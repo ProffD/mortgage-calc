@@ -6,6 +6,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "deploy": "gh-pages -d build",
     "watch": "ng build --watch --configuration development",
     "serve": "ng serve --open"
   },
