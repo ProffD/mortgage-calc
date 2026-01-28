@@ -6,7 +6,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "deploy": "gh-pages -d build",
+    "predeploy": "ng build --base-href /mortgage-calculator/",
+    "deploy": "gh-pages -d dist/mortgage-calculator",
     "watch": "ng build --watch --configuration development",
     "serve": "ng serve --open"
   },
