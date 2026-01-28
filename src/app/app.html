@@ -1,0 +1,296 @@
+<div class="container">
+  <header class="header">
+    <h1>🏡 {{ title }}</h1>
+    <p class="subtitle">Calculate your monthly mortgage payments with ease</p>
+  </header>
+
+  <div class="calculator-wrapper">
+    <!-- Input Section -->
+    <section class="input-section">
+      <h2>Loan Details</h2>
+      
+      <div class="input-group">
+        <label for="loanAmount">
+          <span class="label-text">Loan Amount</span>
+          <span class="label-value">{{ formatCurrency(loanAmount()) }}</span>
+        </label>
+        <input
+          id="loanAmount"
+          type="number"
+          [value]="loanAmount()"
+          (input)="updateLoanAmount($any($event.target).value)"
+          min="0"
+          step="1000"
+          class="input-field"
+        />
+        <input
+          type="range"
+          [value]="loanAmount()"
+          (input)="updateLoanAmount($any($event.target).value)"
+          min="50000"
+          max="1000000"
+          step="5000"
+          class="slider"
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="annualRate">
+          <span class="label-text">Annual Interest Rate</span>
+          <span class="label-value">{{ formatPercentage(annualRate()) }}</span>
+        </label>
+        <input
+          id="annualRate"
+          type="number"
+          [value]="annualRate()"
+          (input)="updateAnnualRate($any($event.target).value)"
+          min="0"
+          max="100"
+          step="0.1"
+          class="input-field"
+        />
+        <input
+          type="range"
+          [value]="annualRate()"
+          (input)="updateAnnualRate($any($event.target).value)"
+          min="0"
+          max="15"
+          step="0.1"
+          class="slider"
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="loanTerm">
+          <span class="label-text">Loan Term</span>
+          <span class="label-value">{{ loanTerm() }} years</span>
+        </label>
+        <input
+          id="loanTerm"
+          type="number"
+          [value]="loanTerm()"
+          (input)="updateLoanTerm($any($event.target).value)"
+          min="1"
+          max="50"
+          step="1"
+          class="input-field"
+        />
+        <input
+          type="range"
+          [value]="loanTerm()"
+          (input)="updateLoanTerm($any($event.target).value)"
+          min="1"
+          max="40"
+          step="1"
+          class="slider"
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="extraPayment">
+          <span class="label-text">Extra Monthly Payment</span>
+          <span class="label-value">{{ formatCurrency(extraPayment()) }}</span>
+        </label>
+        <input
+          id="extraPayment"
+          type="number"
+          [value]="extraPayment()"
+          (input)="updateExtraPayment($any($event.target).value)"
+          min="0"
+          step="50"
+          class="input-field"
+          placeholder="Optional extra payment"
+        />
+        <input
+          type="range"
+          [value]="extraPayment()"
+          (input)="updateExtraPayment($any($event.target).value)"
+          min="0"
+          max="5000"
+          step="50"
+          class="slider"
+        />
+      </div>
+
+      <!-- Payment Frequency Toggle -->
+      <div class="input-group">
+        <label>
+          <span class="label-text">Payment Frequency</span>
+          <span class="label-value payment-badge">{{ paymentFrequency() === 'monthly' ? 'Monthly' : 'Bi-Weekly' }}</span>
+        </label>
+        <button 
+          class="frequency-toggle-btn" 
+          (click)="togglePaymentFrequency()"
+          [class.biweekly]="paymentFrequency() === 'biweekly'">
+          <span class="toggle-option" [class.active]="paymentFrequency() === 'monthly'">📅 Monthly</span>
+          <span class="toggle-option" [class.active]="paymentFrequency() === 'biweekly'">⚡ Bi-Weekly</span>
+        </button>
+        @if (paymentFrequency() === 'biweekly') {
+          <p class="frequency-note">💡 Bi-weekly payments = 26 payments/year (extra month's payment)</p>
+        }
+      </div>
+
+      <!-- One-Time Extra Payment -->
+      <div class="input-group one-time-section">
+        <label>
+          <span class="label-text">One-Time Extra Payments</span>
+          <span class="label-value">{{ oneTimePayments().length }} added</span>
+        </label>
+        <p class="hint-text">💡 Add lump sum payments at specific months</p>
+        
+        <div class="one-time-form">
+          <div class="one-time-inputs">
+            <div class="input-wrapper">
+              <label class="input-label">Month #</label>
+              <input
+                type="number"
+                [value]="oneTimeMonth()"
+                (input)="updateOneTimeMonth($any($event.target).value)"
+                min="1"
+                [max]="loanTerm() * 12"
+                placeholder="e.g., 12"
+                class="input-field small"
+              />
+            </div>
+            <div class="input-wrapper">
+              <label class="input-label">Amount (R)</label>
+              <input
+                type="number"
+                [value]="oneTimeAmount()"
+                (input)="updateOneTimeAmount($any($event.target).value)"
+                min="0"
+                step="100"
+                placeholder="e.g., 5000"
+                class="input-field small"
+              />
+            </div>
+            <button class="add-payment-btn" (click)="addOneTimePayment()">+ Add</button>
+          </div>
+          
+          @if (oneTimePayments().length > 0) {
+            <div class="one-time-list">
+              @for (payment of oneTimePayments(); track payment.month) {
+                <div class="one-time-item">
+                  <span>Month {{ payment.month }}: {{ formatCurrency(payment.amount) }}</span>
+                  <button class="remove-btn" (click)="removeOneTimePayment(payment.month)">×</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- Results Section -->
+    @if (mortgageResult()) {
+      <section class="results-section">
+        <h2>Payment Summary</h2>
+        
+        @if (paymentFrequency() === 'biweekly') {
+          <div class="result-card biweekly">
+            <div class="result-label">Bi-Weekly Payment</div>
+            <div class="result-value">{{ formatCurrency(mortgageResult()!.biweeklyPayment!) }}</div>
+          </div>
+        }
+        
+        <div class="result-card primary">
+          <div class="result-label">Monthly Payment</div>
+          <div class="result-value">{{ formatCurrency(mortgageResult()!.monthlyPayment) }}</div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-card">
+            <div class="result-label">Total Payment</div>
+            <div class="result-value">{{ formatCurrency(mortgageResult()!.totalPayment) }}</div>
+          </div>
+
+          <div class="result-card">
+            <div class="result-label">Total Interest</div>
+            <div class="result-value">{{ formatCurrency(mortgageResult()!.totalInterest) }}</div>
+          </div>
+        </div>
+
+        @if (mortgageResult()!.interestSaved && mortgageResult()!.interestSaved! > 0) {
+          <div class="savings-info">
+            <div class="savings-card">
+              <div class="savings-header">💰 Extra Payment Benefits</div>
+              <div class="savings-grid">
+                <div class="savings-item">
+                  <span class="savings-label">Interest Saved:</span>
+                  <span class="savings-value">{{ formatCurrency(mortgageResult()!.interestSaved!) }}</span>
+                </div>
+                <div class="savings-item">
+                  <span class="savings-label">Time Saved:</span>
+                  <span class="savings-value">{{ mortgageResult()!.monthsSaved }} months</span>
+                </div>
+                <div class="savings-item">
+                  <span class="savings-label">Payoff Date:</span>
+                  <span class="savings-value">{{ mortgageResult()!.payoffDate!.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Export Buttons -->
+        <div class="export-section">
+          <h3 class="export-title">📥 Export Report</h3>
+          <div class="export-buttons">
+            <button class="export-btn pdf-btn" (click)="exportPDF()">
+              <span class="btn-icon">📄</span>
+              <span class="btn-text">Download PDF</span>
+            </button>
+            <button class="export-btn excel-btn" (click)="exportExcel()">
+              <span class="btn-icon">📊</span>
+              <span class="btn-text">Download Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Amortization Toggle -->
+        <button class="toggle-button" (click)="toggleAmortization()">
+          {{ showAmortization() ? '▼ Hide' : '▶ Show' }} Amortization Schedule
+        </button>
+
+        <!-- Amortization Schedule -->
+        @if (showAmortization()) {
+          <div class="amortization-section">
+            <div class="table-wrapper">
+              <table class="amortization-table">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th>Payment</th>
+                    <th>Principal</th>
+                    <th>Interest</th>
+                    <th>Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of mortgageResult()!.amortizationSchedule; track entry.month) {
+                    <tr [class.one-time-payment]="entry.isOneTimePayment">
+                      <td>
+                        {{ entry.month }}
+                        @if (entry.isOneTimePayment) {
+                          <span class="one-time-badge">💰</span>
+                        }
+                      </td>
+                      <td>{{ formatCurrency(entry.payment) }}</td>
+                      <td class="principal">{{ formatCurrency(entry.principal) }}</td>
+                      <td class="interest">{{ formatCurrency(entry.interest) }}</td>
+                      <td>{{ formatCurrency(entry.balance) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      </section>
+    }
+  </div>
+
+  <footer class="footer">
+    <p>Built with Angular 20.2 • Standalone Components • Signals • Zoneless</p>
+  </footer>
+</div>
